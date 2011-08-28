@@ -8,7 +8,7 @@ TARGET = build/main.elf
 CC = msp430-gcc
 
 
-MCU = msp430x2013
+MCU = msp430g2231
 
 #INC=-I. -I./apps/ -I./core/ 
 #CFLAGS=-O2 ${INC} -Wall -g -mmcu=msp430x5438
@@ -77,5 +77,5 @@ size: $(TARGET)
 	@echo
 	@msp430-size ${TARGET}
 
-
-
+prog: 
+	mspdebug rf2500 'prog $(TARGET)'
