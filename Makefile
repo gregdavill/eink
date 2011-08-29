@@ -10,14 +10,11 @@ CC = msp430-gcc
 
 MCU = msp430g2231
 
-#INC=-I. -I./apps/ -I./core/ 
-#CFLAGS=-O2 ${INC} -Wall -g -mmcu=msp430x5438
-
 
 ## Options common to compile, link and assembly rules
 COMMON = -mmcu=$(MCU)
 
-override CFLAGS = -g -Wall -O2 -mmcu=$(MCU) $(DEFS) -gdwarf-2
+override CFLAGS = -g -Wall -Os -mmcu=$(MCU) $(DEFS) -gdwarf-2
 
 
 ## Linker flags

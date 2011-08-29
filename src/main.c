@@ -4,19 +4,6 @@ void load(int,char);
 
 unsigned char data[6*5 + 4*3];
 const unsigned char font_data[]= {
-0x00,0x00,0x00,0x00,0x00,/*space*/
-0x00,0xF6,0xF6,0x00,0x00,/*!*/
-0x00,0xE0,0x00,0xE0,0x00,/*"*/
-0x28,0xFE,0x28,0xFE,0x28,/*#*/
-0x00,0x64,0xD6,0x54,0x08,/*$*/
-0xC2,0xCC,0x10,0x26,0xC6,/*%*/
-0x4C,0xB2,0x92,0x6C,0x0A,/*&*/
-0x00,0x00,0xE0,0x00,0x00,/*'*/
-0x00,0x38,0x44,0x82,0x00,/*(*/
-0x00,0x82,0x44,0x38,0x00,/*)*/
-0x88,0x50,0xF8,0x50,0x88,/***/
-0x08,0x08,0x3E,0x08,0x08,/*+*/
-0x00,0x00,0x05,0x06,0x00,/*,*/
 0x08,0x08,0x08,0x08,0x08,/*-*/
 0x00,0x00,0x06,0x06,0x00,/*.*/
 0x02,0x0C,0x10,0x60,0x80,/* */
@@ -101,14 +88,21 @@ const unsigned char font_data[]= {
 
 char adc[] =  "  00oC";
 char volt[] = "  0.0v";
+char time[] = "  HH:MM - DDD NN 2011";
+
+char days[7][3] ={
+	"Sun","Mon","Tue","Wed","Thu","Fri","Sat"
+
+};
 
 char *str;
 char x;
-volatile unsigned int pree;
-volatile char time=32;
-unsigned char a = 0,y,z = 0;
+unsigned int prescale;
+unsigned char a = 0,z = 0;
 
-char flagTemp=1,flagUpdate;
+unsigned char Second,Minute,Hour,Day;
+
+char flagTemp=1,flagUpdate,flagTime;
 long IntDegC;
 
 int main(void)
@@ -143,7 +137,8 @@ int main(void)
 
 	__enable_interrupt();
 	
-	str = &volt[0];
+//	str = &volt[0];
+	str = &time[0];
 	
 	while(1)
 	{
@@ -153,6 +148,8 @@ int main(void)
 			
 			ADC10CTL1 = INCH_10 + ADC10DIV_3;         // Temp Sensor ADC10CLK/4
 			ADC10CTL0 = SREF_1 + ADC10SHT_3 + REFON + ADC10ON + ADC10IE;
+			
+			
 			ADC10CTL0 |= ENC + ADC10SC;
 			__bis_SR_register(LPM0_bits);
 			
@@ -163,36 +160,37 @@ int main(void)
 			ADC10CTL1 = INCH_11;                     // AVcc/2
 			ADC10CTL0 = SREF_1 + ADC10SHT_2 + REFON + ADC10ON + ADC10IE + REF2_5V;
 		     // __delay_cycles(240);
+			
 		    ADC10CTL0 |= ENC + ADC10SC;             // Sampling and conversion start
-		      __bis_SR_register(LPM0_bits);        // LPM0 with interrupts enabled
-		    temp = ADC10MEM;                  // Retrieve result
-			ADC10CTL0 &= ~ENC;
+		  
+		    __bis_SR_register(LPM0_bits);        // LPM0 with interrupts enabled
+		   
+		 	temp = ADC10MEM;                  // Retrieve result
+		//	ADC10CTL0 &= ~ENC;
 
-			  if(temp <= 550)
-			  {
-			    ADC10CTL1 = INCH_11;                     // AVcc/2
+			if(temp <= 550)
+			{
+				ADC10CTL1 = INCH_11;                     // AVcc/2
 				ADC10CTL0 = SREF_1 + ADC10SHT_2 + REFON + ADC10ON + ADC10IE;// + REF2_5V;
-			   // __delay_cycles(240);
+			   	
+				
 			    ADC10CTL0 |= ENC + ADC10SC;             // Sampling and conversion start
 			    __bis_SR_register(LPM0_bits);        // LPM0 with interrupts enabled
 			    temp = ADC10MEM;                  // Retrieve result
 
-			//	temp = results[1];
 			    volts = (temp*15)/512;
-			  }
-			  else
+			}
+			else
 			{
-			//	temp = results[1];
 				 volts = (temp*25)/512;
-			  }
+		 	}
 		      /* Stop and turn off ADC */
-		      ADC10CTL0 &= ~ENC;
+		    ADC10CTL0 &= ~ENC;
 			ADC10CTL0 &= ~(REFON + ADC10ON);
 			
 			volt[2] = volts/10 + '0';
 			volt[4] = volts%10 + '0';
-			//temp = 
-		//	adc[2] = IntDegC < 0 ? '-' : ' ';
+
 			adc[2] = IntDegC/10%10+'0';
 			adc[3] = IntDegC%10+'0';
 			
@@ -201,10 +199,13 @@ int main(void)
 			
 		}
 		
+		
 		if(flagUpdate)	
 		{
 			//======scrolling code, displays data stored in str
-			clear();
+			char t,y;
+			for(t = 0; t< sizeof(data) ; t++)
+				data[t] = 0;
 			
 			for(y = 0; y< 5; y++)
 			{
@@ -223,43 +224,50 @@ int main(void)
 			
 			flagUpdate = 0;
 		}
+		
+		if(flagTime)
+		{
+			if(Second++ > 59)
+			{
+				Second = 0;
+				if(Minute++ > 59)
+				{
+					Minute = 0;
+					if(Hour++ > 23)
+					{
+						Hour = 0;
+						if(Day++ > 6)
+							Day = 0;
+					}	
+				}
+			}
+			
+			time[2] = Hour/10;
+			time[3] = Hour%10;
+			
+			time[5] = Minute/10;
+			time[6] = Minute%10;
+			
+			time[9] = days[Day][0];
+			time[10] = days[Day][1];
+			time[11] = days[Day][2];
+			
+			
+		}
 		__bis_SR_register(LPM3_bits);             // Enter LPM3
 		__no_operation();
 	}
-}
-	
-void clear(void)
-{
-	char t;
-	for(t = 0; t< sizeof(data) ; t++)
-		data[t] = 0;
-}
-
-void shift(void)
-{
-	char t;
-	for(t = 0; t< sizeof(data)-2 ; t++)
-		data[t] = data[t+1];
-	data[sizeof(data)-2] = 0;
 }
 
 void load(int ascii,char address)
 {
 	char y;
 	for(y = 0;y<5;y++)
-		data[y+address] = font_data[(ascii-32)*5 +y];
+		data[y+address] = font_data[(ascii-45)*5 +y];
 }
 
-void SPI(char data)
-{
-	while((USICTL1 & USIIFG) == 0);
-	USICTL1 &= ~(1);
-	USISRL = data>>1;
-	USICNT = 7;
-}
-
-
-// Watchdog Timer interrupt service routine
+const char offset[4] = {5,13,21,29};
+// TimerA2 CCR0 Interrupt
 __attribute__((interrupt(TIMERA0_VECTOR))) TimerA0(void)
 {
 
@@ -267,11 +275,17 @@ __attribute__((interrupt(TIMERA0_VECTOR))) TimerA0(void)
 	CCR0 += 32;
 
 	P1OUT &= ~(0x1F);
-		
-  	SPI(data[x+29]);
-  	SPI(data[x+21]);
-  	SPI(data[x+13]);
-  	SPI(data[x+5]);
+	
+	char t,d;
+	for(t = 0; t < 4; t++)
+	{
+		d = data[x+offset[t]]>>1;
+		while((USICTL1 & USIIFG) == 0);
+		USICTL1 &= ~(1);
+		USISRL = d;
+		USICNT = 7;
+	}
+	
   	P1OUT |= (1<<x);
   
 	if((x++) >= 5)
@@ -279,7 +293,7 @@ __attribute__((interrupt(TIMERA0_VECTOR))) TimerA0(void)
 }
 
 
-// Watchdog Timer interrupt service routine
+// TimerA2 CCR1/Overflow Interrupt
 __attribute__((interrupt(TIMERA1_VECTOR))) TimerA1(void)
 {
   
@@ -288,8 +302,13 @@ __attribute__((interrupt(TIMERA1_VECTOR))) TimerA1(void)
   		case  2:                                  // CCR1
 			CCR1 += 512;
 			flagUpdate = 1;
+			if(prescale++ > 10)
+			{
+				prescale = 0;
+				flagTime = 1;
+			}
      		break;
-  		case  4: break;                          // CCR2 not used	
+  		case  4: break;		                     // CCR2 Not avaliable
   		case 10:                          		 // overflow not used	
 			flagTemp = 1;             			 // Sampling and conversion start
 			break;
@@ -297,8 +316,6 @@ __attribute__((interrupt(TIMERA1_VECTOR))) TimerA1(void)
 
 	__bic_SR_register_on_exit(LPM3_bits);
 }
-
-
 
 __attribute__((interrupt(ADC10_VECTOR))) adc10(void)
 {
