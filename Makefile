@@ -1,5 +1,5 @@
 ###############################################################################
-# Makefile for the research project
+# Generic makefile for MSP430
 ###############################################################################
 
 ## General Flags
@@ -8,13 +8,13 @@ TARGET = build/main.elf
 CC = msp430-gcc
 
 
-MCU = msp430g2231
+MCU = msp430f2013
 
 
 ## Options common to compile, link and assembly rules
 COMMON = -mmcu=$(MCU)
 
-override CFLAGS = -g -Wall -Os -mmcu=$(MCU) $(DEFS) -gdwarf-2
+override CFLAGS = -g -Wall -Os -mmcu=$(MCU) $(DEFS) -gdwarf-2 -fno-builtin
 
 
 ## Linker flags
@@ -25,8 +25,8 @@ LDFLAGS += -Wl,-Map=$(TARGET:%.elf=%.map),--relax
 ## Objects explicitly added by the user
 LINKONLYOBJECTS = 
 
-SRC_DIR   := src/
-BUILD_DIR := build/
+SRC_DIR   := src
+BUILD_DIR := build
 
 SRC       := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
 OBJ       := $(patsubst src/%.c,build/%.o,$(SRC))
@@ -75,4 +75,12 @@ size: $(TARGET)
 	@msp430-size ${TARGET}
 
 prog: 
-	mspdebug rf2500 'prog $(TARGET)'
+	mspdebug rf2500 'locka clear' 'prog $(TARGET)'
+
+
+asm:
+	@echo "+++++++++++++++++++++"
+	@echo "  CC  >"
+	$(CC) -D_GNU_ASSEMBLER_ -x assembler-with-cpp $(INCLUDES) -c src/vlo.s -o build/vlo.o
+	@echo "+++++++++++++++++++++"
+
