@@ -8,7 +8,7 @@ TARGET = build/main.elf
 CC = msp430-gcc
 
 
-MCU = msp430f2013
+MCU = msp430f2012
 
 
 ## Options common to compile, link and assembly rules
